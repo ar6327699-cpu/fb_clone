@@ -89,7 +89,7 @@ class LogoutView(APIView):
 
         return resp
 
-
+#hiiuhi
 #view for the profile watching
 class MyProfileView(generics.RetrieveUpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]

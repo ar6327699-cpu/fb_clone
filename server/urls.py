@@ -8,4 +8,5 @@ urlpatterns = [
     path("health/", health, name="health"),
     #calling the  api of the user acc login, logout, reg
     path("api/accounts/", include("apps.accounts.urls", namespace="accounts")),
+     path("api/chat/", include("apps.chat.urls", namespace="chat")),
 ]

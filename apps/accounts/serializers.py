@@ -4,7 +4,12 @@ from datetime import date
 from .models import User
 from apps.profiles.models import Profile
 
-#controlling the functions of the registeruser
+class UserMiniSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("id", "username")
+
+#controlling the functions of the register user
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     password2 = serializers.CharField(write_only=True)
@@ -31,7 +36,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         user.save()
         return user
 
-#controlling the function of the loginuser
+#controlling the function of the login user
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField(required=True)
     password = serializers.CharField(required=True, write_only=True)

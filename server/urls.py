@@ -19,7 +19,10 @@ urlpatterns = [
     path("api/likes/", include("apps.likes.urls", namespace="likes")),
     #calling the  api of the communities
     path("api/communities/", include("apps.communities.urls", namespace="communities")),
-    #for t he calling of the communities post  (like, unlike etc)
-    path("api/posts/", include("apps.communities.posts_urls")),  
+    #for the calling of the communities post  (like, unlike etc)
+    path("api/posts/", include("apps.communities.posts_urls")), 
+    #for the chat code api calling 
+    path("api/chat/", include("apps.chat.urls", namespace="chat")),
+
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

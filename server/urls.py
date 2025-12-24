@@ -23,6 +23,8 @@ urlpatterns = [
     path("api/posts/", include("apps.communities.posts_urls")), 
     #for the chat code api calling 
     path("api/chat/", include("apps.chat.urls", namespace="chat")),
+# calling the api of the groups
+path("api/groups/", include("apps.groups.urls", namespace="groups")),
 
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

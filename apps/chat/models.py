@@ -3,6 +3,7 @@ from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
 
+
 User = settings.AUTH_USER_MODEL
 
 
@@ -66,6 +67,44 @@ class MessageDeletion(models.Model):
         Message, related_name="deleted_for", on_delete=models.CASCADE
     )
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ("message", "user")
+
+class GroupMessage(models.Model):
+    group = models.ForeignKey(
+        "groups.Group",
+        on_delete=models.CASCADE,
+        related_name="messages"
+    )
+    sender = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE
+    )
+
+    text = models.TextField(blank=True, null=True)
+    image = models.ImageField(upload_to="group/images/", blank=True, null=True)
+    audio = models.FileField(upload_to="group/audio/", blank=True, null=True)
+    video = models.FileField(upload_to="group/video/", blank=True, null=True)
+
+    is_deleted = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"GroupMessage {self.id}"
+
+
+class GroupMessageSeen(models.Model):
+    message = models.ForeignKey(
+        GroupMessage,
+        related_name="seen_by",
+        on_delete=models.CASCADE
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE
+    )
+    seen_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         unique_together = ("message", "user")

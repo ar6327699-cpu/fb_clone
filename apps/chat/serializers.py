@@ -3,6 +3,7 @@ from .models import (
     ChatThread, ChatRequest, Message, MessageDeletion, Block
 )
 from apps.accounts.serializers import UserMiniSerializer
+from .models import GroupMessage
 
 
 class ChatRequestSerializer(serializers.ModelSerializer):
@@ -69,3 +70,37 @@ class BlockSerializer(serializers.ModelSerializer):
     class Meta:
         model = Block
         fields = ("id", "blocked", "created_at")
+
+class GroupMessageSerializer(serializers.ModelSerializer):
+    sender = UserMiniSerializer(read_only=True)
+
+    class Meta:
+        model = GroupMessage
+        fields = (
+            "id",
+            "group",
+            "sender",
+            "text",
+            "image",
+            "audio",
+            "video",
+            "is_deleted",
+            "created_at",
+        )
+        read_only_fields = (
+            "sender",
+            "created_at",
+            "is_deleted",
+        )
+
+    # 🔥 DELETE FOR EVERYONE (GROUP)
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+
+        if instance.is_deleted:
+            data["text"] = None
+            data["image"] = None
+            data["audio"] = None
+            data["video"] = None
+
+        return data

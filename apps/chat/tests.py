@@ -2,7 +2,8 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from apps.friendships.models import Friendship
-from .models import ChatThread, ChatRequest, Message, Block
+from .models import ChatThread, ChatRequest, Message, Block,GroupMessage, GroupMessageSeen
+from apps.groups.models import Group, GroupMember
 
 User = get_user_model()
 
@@ -194,3 +195,176 @@ class ChatThreadTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data["received"]), 1)
         self.assertEqual(len(response.data["sent"]), 0)
+class GroupChatTestCase(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+        # users
+        self.admin = User.objects.create_user(
+            username="admin", email="admin@test.com", password="pass123"
+        )
+        self.member = User.objects.create_user(
+            username="member", email="member@test.com", password="pass123"
+        )
+        self.other = User.objects.create_user(
+            username="other", email="other@test.com", password="pass123"
+        )
+
+        # group
+        self.group = Group.objects.create(
+            name="Test Group",
+            created_by=self.admin
+        )
+
+        # members
+        GroupMember.objects.create(
+            group=self.group,
+            user=self.admin,
+            role="admin"
+        )
+        GroupMember.objects.create(
+            group=self.group,
+            user=self.member,
+            role="member"
+        )
+
+        self.client.force_authenticate(user=self.admin)
+
+    # =====================================================
+    # GROUP MESSAGE HISTORY
+    # =====================================================
+
+    def test_group_message_history_as_member(self):
+        GroupMessage.objects.create(
+            group=self.group,
+            sender=self.admin,
+            text="Hello group"
+        )
+
+        response = self.client.get(
+            f"/chat/groups/{self.group.id}/messages/"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
+
+    def test_group_message_history_non_member_forbidden(self):
+        self.client.force_authenticate(user=self.other)
+
+        response = self.client.get(
+            f"/chat/groups/{self.group.id}/messages/"
+        )
+        self.assertEqual(response.status_code, 403)
+
+    # =====================================================
+    # GROUP MESSAGE SEND
+    # =====================================================
+
+    def test_group_member_can_send_message(self):
+        self.client.force_authenticate(user=self.member)
+
+        response = self.client.post(
+            f"/chat/groups/{self.group.id}/messages/",
+            {"text": "Hi everyone"}
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(GroupMessage.objects.count(), 1)
+
+    def test_non_member_cannot_send_message(self):
+        self.client.force_authenticate(user=self.other)
+
+        response = self.client.post(
+            f"/chat/groups/{self.group.id}/messages/",
+            {"text": "Should fail"}
+        )
+        self.assertEqual(response.status_code, 403)
+
+    # =====================================================
+    # GROUP MESSAGE DELETE
+    # =====================================================
+
+    def test_sender_can_delete_group_message(self):
+        msg = GroupMessage.objects.create(
+            group=self.group,
+            sender=self.member,
+            text="Delete me"
+        )
+
+        self.client.force_authenticate(user=self.member)
+        response = self.client.post(
+            f"/chat/group-messages/{msg.id}/delete/"
+        )
+        self.assertEqual(response.status_code, 200)
+
+        msg.refresh_from_db()
+        self.assertTrue(msg.is_deleted)
+
+    def test_admin_can_delete_any_group_message(self):
+        msg = GroupMessage.objects.create(
+            group=self.group,
+            sender=self.member,
+            text="Admin delete"
+        )
+
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.post(
+            f"/chat/group-messages/{msg.id}/delete/"
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_member_cannot_delete_others_message(self):
+        msg = GroupMessage.objects.create(
+            group=self.group,
+            sender=self.admin,
+            text="Protected"
+        )
+
+        self.client.force_authenticate(user=self.member)
+        response = self.client.post(
+            f"/chat/group-messages/{msg.id}/delete/"
+        )
+        self.assertEqual(response.status_code, 403)
+
+    # =====================================================
+    # GROUP MESSAGE SEEN
+    # =====================================================
+
+    def test_mark_group_message_seen(self):
+        msg = GroupMessage.objects.create(
+            group=self.group,
+            sender=self.admin,
+            text="Seen test"
+        )
+
+        self.client.force_authenticate(user=self.member)
+        response = self.client.post(
+            f"/chat/group-messages/{msg.id}/seen/"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(GroupMessageSeen.objects.count(), 1)
+
+    def test_seen_only_once(self):
+        msg = GroupMessage.objects.create(
+            group=self.group,
+            sender=self.admin,
+            text="Seen once"
+        )
+
+        self.client.force_authenticate(user=self.member)
+        self.client.post(f"/chat/group-messages/{msg.id}/seen/")
+        response = self.client.post(f"/chat/group-messages/{msg.id}/seen/")
+
+        self.assertEqual(GroupMessageSeen.objects.count(), 1)
+        self.assertEqual(response.status_code, 400)
+
+    def test_non_member_cannot_mark_seen(self):
+        msg = GroupMessage.objects.create(
+            group=self.group,
+            sender=self.admin,
+            text="No access"
+        )
+
+        self.client.force_authenticate(user=self.other)
+        response = self.client.post(
+            f"/chat/group-messages/{msg.id}/seen/"
+        )
+        self.assertEqual(response.status_code, 403)

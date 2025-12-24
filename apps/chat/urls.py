@@ -12,6 +12,11 @@ from .views import (
     PendingChatRequestsView,
     BlockedUsersListView,
     MarkMessageAsReadView,
+    UploadGroupMediaView,
+     DeleteGroupMessageView,
+     GroupMessageHistoryView,
+      MarkGroupMessageSeenView,
+      GroupMessageCreateView
 )
 
 app_name = "chat"
@@ -36,4 +41,21 @@ urlpatterns = [
     path("block/<int:user_id>/", BlockUserView.as_view(), name="block_user"),
     path("unblock/<int:user_id>/", UnblockUserView.as_view(), name="unblock_user"),
     path("blocked/", BlockedUsersListView.as_view(), name="blocked_list"),
+
+    path("group/upload/", UploadGroupMediaView.as_view()),
+      path(
+        "groups/messages/<int:message_id>/delete/",
+        DeleteGroupMessageView.as_view()
+    ),
+path("groups/<int:group_id>/messages/", GroupMessageHistoryView.as_view()),
+
+path("groups/messages/<int:message_id>/seen/",
+    MarkGroupMessageSeenView.as_view()),
+     
+     
+     
+     path(
+        "groups/<int:group_id>/messages/",
+        GroupMessageCreateView.as_view()
+    ),
 ]
